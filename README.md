@@ -4,7 +4,7 @@ Single-file, browser-based tool for tracking per-partner ownership of §754 basi
 asset groups through buy-ins and buy-outs, and computing time-weighted annual allocation
 percentages to apply against workpaper depreciation.
 
-This repository publishes a previously built tool — v1.0, built April 24, 2026 (per file metadata).
+This repository publishes a previously built tool — v1.0, built April 24, 2026.
 
 ## Use it
 
@@ -20,12 +20,22 @@ No install, no server, no dependencies. All data stays in your browser (localSto
   transfer without a §754 asset), and share splits; Excel import supported
 - **Allocation** — time-weighted annual allocation percentages per partner for each §754
   asset group, plus a cross-group summary for the selected year
-- **Data** — JSON export/import, CSV export of allocations, print-friendly layout, and a
-  built-in example dataset
+- **JSON export/import** — the entire dataset travels as a single JSON file (see below)
+- CSV export of allocations, print-friendly layout, and a built-in example dataset
+
+## JSON export / import
+
+Everything the tool knows — partners, transactions, and settings — exports to one dated JSON
+file (`section754-state-YYYY-MM-DD.json`) via **Export JSON** in the footer, and
+**Import JSON** restores that file exactly. Use it to:
+
+- **Back up your work** — localStorage is per-browser and can be cleared, so export after
+  meaningful changes
+- **Move between machines or browsers** — export on one, import on the other
+- **Share a scenario** — send the file to a colleague; importing reproduces your exact state
+- **Keep per-engagement snapshots** — e.g., archive a year-end file for each partnership
 
 ## Notes
 
-- Data is stored only in the browser's localStorage — use **Export JSON** for backups or to
-  move data between machines.
 - A purchase transaction pools all sellers into one §754 asset group; each buyer's units in
   the group equal the shares they bought.
