@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>§754 Asset Allocation Tool</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f7f7f8;
+      --surface-2: #eeeef0;
+      --text: #1a1a1a;
+      --text-muted: #666;
+      --text-subtle: #999;
+      --border: #d8d8dc;
+      --border-strong: #999;
+      --accent: #1d4ed8;
+      --accent-light: #dbeafe;
+      --good: #047857;
+      --good-light: #d1fae5;
+      --warn: #b45309;
+      --warn-light: #fef3c7;
+      --bad: #b91c1c;
+      --bad-light: #fee2e2;
+      --mono: "SF Mono", "Consolas", "Monaco", "Courier New", monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    h1, h2, h3, h4 { margin: 0 0 8px 0; font-weight: 600; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 18px; margin-top: 0; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    h3 { font-size: 15px; margin-top: 24px; margin-bottom: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta { color: var(--text-muted); font-size: 12px; font-weight: 400; }
+    .mono, .num { font-family: var(--mono); }
+    td.num, th.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+    }
+    header .sub { color: var(--text-muted); font-size: 13px; margin-top: 4px; max-width: 900px; }
+
+    nav.tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      padding: 0 24px;
+    }
+    nav.tabs button {
+      background: none;
+      border: none;
+      padding: 12px 20px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      font-weight: 500;
+      margin-bottom: -1px;
+    }
+    nav.tabs button:hover { color: var(--text); }
+    nav.tabs button.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      font-weight: 600;
+    }
+
+    main {
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+    section.tab-content { display: none; }
+    section.tab-content.active { display: block; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 13px;
+      background: white;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: var(--surface);
+      font-weight: 600;
+      text-align: left;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    th.num { text-align: right; }
+    tbody tr:hover { background: #fafafa; }
+    tr.total-row {
+      background: var(--accent-light) !important;
+      font-weight: 600;
+    }
+    tr.total-row td { border-top: 2px solid var(--accent); }
+
+    button.primary {
+      background: var(--accent);
+      color: white;
+      border: 1px solid var(--accent);
+      padding: 7px 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    button.primary:hover { background: #1e40af; }
+    button.secondary {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border-strong);
+      padding: 7px 14px;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button.secondary:hover { background: var(--surface); }
+    button.danger {
+      background: white;
+      color: var(--bad);
+      border: 1px solid var(--bad);
+      padding: 3px 10px;
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+    button.danger:hover { background: var(--bad-light); }
+    button.ghost {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 13px;
+      padding: 4px 8px;
+      text-decoration: underline;
+    }
+    button.ghost:hover { color: #1e40af; }
+
+    form fieldset {
+      border: 1px solid var(--border);
+      padding: 12px 16px 16px 16px;
+      margin: 14px 0;
+      background: white;
+    }
+    form legend {
+      font-weight: 600;
+      padding: 0 8px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .row select, .row input, input[type=date], select {
+      padding: 6px 8px;
+      font-size: 14px;
+      border: 1px solid var(--border-strong);
+      border-radius: 3px;
+      background: white;
+    }
+    .row input[type=number] {
+      width: 110px;
+      font-family: var(--mono);
+      text-align: right;
+    }
+    .row select { min-width: 160px; }
+
+    label { font-weight: 500; }
+
+    .form-row { margin-bottom: 10px; }
+    .form-actions { margin-top: 16px; display: flex; gap: 10px; }
+
+    .controls {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .controls label { display: flex; gap: 6px; align-items: center; }
+
+    .asset-card {
+      border: 1px solid var(--border-strong);
+      margin: 20px 0;
+      padding: 0;
+      background: white;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .asset-header {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border-strong);
+      padding: 10px 14px;
+    }
+    .asset-header .title { font-weight: 600; font-size: 15px; }
+    .asset-header .subtitle { color: var(--text-muted); font-weight: 400; font-size: 12px; margin-top: 3px; }
+    .asset-card > table { border: none; }
+    .asset-card > table th, .asset-card > table td { border-left: none; border-right: none; }
+
+    .error-container { margin-top: 12px; }
+    .error {
+      color: var(--bad);
+      background: var(--bad-light);
+      border: 1px solid var(--bad);
+      padding: 8px 12px;
+      margin: 8px 0;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+    .validation-msg { margin: 8px 0; min-height: 20px; color: var(--bad); font-size: 13px; }
+    .validation-msg.ok { color: var(--good); }
+
+    .ledger-entry {
+      border: 1px solid var(--border);
+      background: white;
+      margin-bottom: 8px;
+    }
+    .ledger-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .ledger-head:hover { background: var(--surface-2); }
+    .ledger-date {
+      font-weight: 600;
+      font-family: var(--mono);
+      margin-right: 12px;
+      padding: 2px 8px;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+    }
+    .ledger-summary { flex: 1; font-size: 13px; }
+    .ledger-actions { display: flex; gap: 6px; }
+    .ledger-details {
+      padding: 10px 14px;
+      font-size: 12px;
+      background: white;
+      display: none;
+    }
+    .ledger-entry.expanded .ledger-details { display: block; }
+    .ledger-details table { margin-top: 6px; }
+    .ledger-details h5 { margin: 8px 0 4px 0; font-size: 11px; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.4px; }
+
+    .arrow-toggle {
+      display: inline-block;
+      width: 14px;
+      transform: rotate(0deg);
+      transition: transform 0.15s ease;
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .ledger-entry.expanded .arrow-toggle { transform: rotate(90deg); }
+
+    .math-cell {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: nowrap;
+    }
+    .math-cell .ownership { color: var(--text); }
+    .math-cell .day-frac { color: var(--text-muted); }
+    .math-cell .result { color: var(--accent); font-weight: 600; }
+    .math-cell .equals { color: var(--text-muted); padding-right: 3px; }
+
+    .period-header .period-dates { font-weight: 600; font-size: 12px; }
+    .period-header .period-days { color: var(--text-muted); font-size: 11px; font-weight: 400; font-family: var(--mono); }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 14px 24px;
+      color: var(--text-muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 32px;
+      background: var(--surface);
+    }
+    footer .data-ops { display: flex; gap: 4px; align-items: center; }
+    footer strong { color: var(--text); }
+
+    .badge {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-family: var(--mono);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+    .badge.accent { background: var(--accent-light); color: var(--accent); }
+
+    .hint {
+      background: var(--good-light);
+      border-left: 3px solid var(--good);
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #065f46;
+      margin-bottom: 14px;
+      border-radius: 2px;
+    }
+    .hint.warn {
+      background: var(--warn-light);
+      border-left-color: var(--warn);
+      color: #78350f;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; top:0; left:0; right:0; bottom:0;
+      background: rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+    }
+    .modal {
+      background: white;
+      border-radius: 4px;
+      padding: 20px 24px;
+      min-width: 520px;
+      max-width: 720px;
+      max-height: 85vh;
+      overflow: auto;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    }
+    .modal h3 { margin-top: 0; text-transform: none; letter-spacing: 0; font-size: 17px; color: var(--text); }
+    .modal p { font-size: 13px; color: var(--text-muted); margin: 6px 0; }
+    .modal code { background: var(--surface-2); padding: 2px 6px; border-radius: 3px; font-family: var(--mono); font-size: 12px; }
+    .modal textarea {
+      width: 100%; min-height: 140px;
+      font-family: var(--mono); font-size: 13px;
+      border: 1px solid var(--border-strong); border-radius: 3px;
+      padding: 8px; resize: vertical;
+    }
+    .modal-actions { margin-top: 14px; display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-preview {
+      margin-top: 14px;
+      max-height: 300px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+    }
+
+    /* Asset name */
+    .asset-name {
+      color: var(--text-muted);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 13px;
+    }
+    .asset-name-title {
+      color: var(--text);
+      font-weight: 500;
+      font-style: normal;
+      font-size: 15px;
+    }
+
+    /* Units in math cell */
+    .math-cell .units {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .math-cell .units-sub { color: var(--text-muted); font-weight: 400; font-size: 11px; }
+
+    @media print {
+      nav.tabs, footer, form, button, .controls, .ledger-entry, #tab-partners, #tab-transactions {
+        display: none !important;
+      }
+      #tab-allocation { display: block !important; }
+      header { break-inside: avoid; }
+      .asset-card { page-break-inside: avoid; border: 1px solid black; }
+      body { font-size: 11px; }
+      main { max-width: none; padding: 10px; }
+      th { background: #eee !important; -webkit-print-color-adjust: exact; }
+      tr.total-row { background: #e0e7ff !important; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>§754 Asset Allocation Tool</h1>
+    <div class="sub">
+      Track per-partner ownership of §754 basis-adjustment asset groups through buy-ins and buy-outs,
+      and compute time-weighted annual allocation percentages to apply against workpaper depreciation.
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button data-tab="partners" class="active">Partners</button>
+    <button data-tab="transactions">Transactions</button>
+    <button data-tab="allocation">Allocation</button>
+  </nav>
+
+  <main>
+    <!-- ============ PARTNERS TAB ============ -->
+    <section id="tab-partners" class="tab-content active">
+      <h2>Partners</h2>
+      <div class="controls">
+        <label>Genesis date: <input type="date" id="genesis-date"></label>
+        <span class="meta">First day of the partnership for purposes of this tool. Initial shares are held as of this date.</span>
+      </div>
+      <table id="partners-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th class="num">Initial Shares</th>
+            <th class="num">Current Shares</th>
+            <th class="num">§754 Asset Groups Held</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="partners-tbody"></tbody>
+      </table>
+      <div class="controls" style="margin-top: 12px;">
+        <button class="primary" id="add-partner">+ Add Partner</button>
+        <button class="secondary" id="paste-partners">Paste from Excel</button>
+        <span class="meta">For partners joining later via buy-in: add them here with <strong>Initial Shares = 0</strong>, then list them as a buyer in a transaction.</span>
+      </div>
+      <div id="partners-errors" class="error-container"></div>
+    </section>
+
+    <!-- ============ TRANSACTIONS TAB ============ -->
+    <section id="tab-transactions" class="tab-content">
+      <h2>Transactions</h2>
+
+      <form id="tx-form">
+        <div class="form-row">
+          <label>Type:
+            <select id="tx-type">
+              <option value="purchase">Purchase (creates §754 asset)</option>
+              <option value="gift">Gift (transfers ownership, no §754 asset)</option>
+              <option value="split">Share split</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Date: <input type="date" id="tx-date" required></label>
+        </div>
+        <div class="form-row" id="tx-split-row" style="display:none;">
+          <label>Split factor: <input type="number" id="tx-split-factor" step="any" min="0.0001" style="width:110px;"></label>
+          <span class="meta">&nbsp;&nbsp;New shares per old share — e.g., <code style="background:var(--surface-2);padding:1px 4px;border-radius:2px;">2</code> for 2-for-1, <code style="background:var(--surface-2);padding:1px 4px;border-radius:2px;">0.5</code> for 1-for-2 reverse.</span>
+        </div>
+        <div class="form-row" id="tx-name-row">
+          <label><span id="tx-name-label">Asset name (optional):</span> <input type="text" id="tx-asset-name" placeholder='e.g., "P1 full sell-out"' style="width:260px;"></label>
+        </div>
+        <fieldset id="tx-sellers-fs">
+          <legend id="tx-sellers-legend">Sellers &nbsp;<span class="meta" style="text-transform:none;letter-spacing:0;">— all sellers contribute to one pooled §754 asset group</span></legend>
+          <div id="sellers-rows"></div>
+          <button type="button" class="ghost" id="add-seller">+ Add seller</button>
+        </fieldset>
+        <fieldset id="tx-buyers-fs">
+          <legend id="tx-buyers-legend">Buyers &nbsp;<span class="meta" style="text-transform:none;letter-spacing:0;">— each buyer's units in the new asset group = the shares they bought</span></legend>
+          <div id="buyers-rows"></div>
+          <button type="button" class="ghost" id="add-buyer">+ Add buyer</button>
+        </fieldset>
+        <div id="tx-validation" class="validation-msg"></div>
+        <div class="form-actions">
+          <button type="submit" class="primary">Add Transaction</button>
+          <button type="button" class="secondary" id="tx-form-reset">Clear form</button>
+          <button type="button" class="secondary" id="paste-tx">Import from Excel</button>
+        </div>
+      </form>
+
+      <h3>Transaction Ledger</h3>
+      <div id="tx-ledger"></div>
+    </section>
+
+    <!-- ============ ALLOCATION TAB ============ -->
+    <section id="tab-allocation" class="tab-content">
+      <h2>Annual Allocation</h2>
+      <div class="controls">
+        <label>Year: <select id="alloc-year"></select></label>
+        <label><input type="checkbox" id="alloc-show-zero"> Show partners with 0% allocation</label>
+        <button class="secondary" id="alloc-export-csv">Export CSV</button>
+        <button class="secondary" id="alloc-print">Print</button>
+      </div>
+      <div id="alloc-content"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="data-ops">
+      <strong>Data:</strong>&nbsp;stored in this browser's localStorage.
+      <button class="ghost" id="export-json">Export JSON</button>
+      <button class="ghost" id="import-json">Import JSON</button>
+      <button class="ghost" id="reset-example">Reset to example</button>
+      <button class="ghost" id="clear-all">Clear all</button>
+    </div>
+    <div>§754 allocation · v1.0</div>
+  </footer>
+
+  <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+
+  <!-- Paste partners from Excel modal -->
+  <div id="paste-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <h3>Paste Partners from Excel</h3>
+      <p>Paste rows copied from Excel. Two formats accepted:</p>
+      <p>&nbsp;&nbsp;One column: <code>Name</code> &nbsp;(initial shares default to 0)</p>
+      <p>&nbsp;&nbsp;Two columns: <code>Name &lt;TAB&gt; Initial Shares</code></p>
+      <p>A header row (e.g. first row is literally "Name" / "Partner") is auto-skipped. Existing partners are kept; pasted rows are appended.</p>
+      <textarea id="paste-textarea" placeholder="Partner 1&#9;10&#10;Partner 2&#9;10&#10;Partner 3&#9;15"></textarea>
+      <div id="paste-preview" class="modal-preview" style="display:none;"></div>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="paste-cancel">Cancel</button>
+        <button type="button" class="secondary" id="paste-parse">Preview</button>
+        <button type="button" class="primary" id="paste-apply" style="display:none;">Append to partners</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename asset modal -->
+  <div id="rename-modal" class="modal-overlay" style="display:none;">
+    <div class="modal" style="min-width:420px;">
+      <h3>Rename Asset Group</h3>
+      <p>Set a human-readable name for <span id="rename-target" class="mono"></span>. Leave blank to clear.</p>
+      <input type="text" id="rename-input" style="width:100%;padding:8px;border:1px solid var(--border-strong);border-radius:3px;font-size:14px;">
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="rename-cancel">Cancel</button>
+        <button type="button" class="primary" id="rename-apply">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import transaction modal -->
+  <div id="tx-import-modal" class="modal-overlay" style="display:none;">
+    <div class="modal">
+      <h3>Import Transaction from Excel</h3>
+      <p>One transaction per import. Set the metadata below, then paste the participant rows.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;">
+        <label>Type:
+          <select id="txi-type" style="width:100%;padding:6px;">
+            <option value="purchase">Purchase (creates §754 asset)</option>
+            <option value="gift">Gift (no §754 asset)</option>
+            <option value="split">Share split</option>
+          </select>
+        </label>
+        <label>Date:
+          <input type="date" id="txi-date" style="width:100%;padding:6px;">
+        </label>
+        <label style="grid-column:1/3;">Asset name / note (optional):
+          <input type="text" id="txi-name" style="width:100%;padding:6px;" placeholder='e.g., "P1 full sell-out"'>
+        </label>
+        <label id="txi-factor-row" style="grid-column:1/3;display:none;">Split factor:
+          <input type="number" id="txi-factor" step="any" min="0.0001" style="width:120px;padding:6px;">
+        </label>
+      </div>
+      <div id="txi-parties-section">
+        <p style="margin-bottom:4px;"><strong>Paste participants</strong> — each row is one partner's role in this transaction. Two accepted formats:</p>
+        <p style="margin:4px 0;">&nbsp;&nbsp;<strong>2 columns:</strong> <code>Partner ID &lt;TAB&gt; Shares</code> &nbsp;(negative or <code>(N)</code> parentheses = sold)</p>
+        <p style="margin:4px 0;">&nbsp;&nbsp;<strong>3 columns:</strong> <code>Partner ID &lt;TAB&gt; Role &lt;TAB&gt; Shares</code> &nbsp;(role = buyer/seller/bought/sold/in/out)</p>
+        <p style="margin:4px 0;">Partner ID may also be the partner's name (case-insensitive match). Header row auto-skipped.</p>
+        <textarea id="txi-textarea" placeholder="P1&#9;(10)&#10;P4&#9;2.5&#10;P5&#9;2.5&#10;P6&#9;2.5&#10;P7&#9;2.5"></textarea>
+      </div>
+      <div id="txi-preview" class="modal-preview" style="display:none;"></div>
+      <div class="modal-actions">
+        <button type="button" class="ghost" id="txi-cancel">Cancel</button>
+        <button type="button" class="secondary" id="txi-parse">Preview</button>
+        <button type="button" class="primary" id="txi-apply" style="display:none;">Import transaction</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function(){
+    'use strict';
+
+    // ==================== STATE ====================
+    const STORAGE_KEY = 'section754-tool-v1';
+    let state = null;
+
+    function defaultExample() {
+      return {
+        genesisDate: '2025-01-01',
+        nextPartnerNum: 11,
+        nextTxNum: 3,
+        partners: Array.from({length: 10}, (_, i) => ({
+          id: 'P' + (i+1),
+          name: 'Partner ' + (i+1),
+          initialShares: 10,
+        })),
+        transactions: [
+          {
+            id: 'T1',
+            date: '2025-03-01',
+            sellers: [{partnerId: 'P1', shares: 10}],
+            buyers: [
+              {partnerId: 'P4', shares: 2.5},
+              {partnerId: 'P5', shares: 2.5},
+              {partnerId: 'P6', shares: 2.5},
+              {partnerId: 'P7', shares: 2.5},
+            ],
+          },
+          {
+            id: 'T2',
+            date: '2025-06-01',
+            sellers: [{partnerId: 'P4', shares: 2}],
+            buyers: [
+              {partnerId: 'P5', shares: 1},
+              {partnerId: 'P8', shares: 1},
+            ],
+          },
+        ],
+      };
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error('save failed', e);
+      }
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          state = JSON.parse(raw);
+          if (!state.nextPartnerNum) state.nextPartnerNum = Math.max(...state.partners.map(p => parseInt(p.id.slice(1))), 0) + 1;
+          if (!state.nextTxNum) state.nextTxNum = Math.max(...state.transactions.map(t => parseInt(t.id.slice(1))), 0) + 1;
+        } else {
+          state = defaultExample();
+        }
+      } catch (e) {
+        console.error('load failed', e);
+        state = defaultExample();
+      }
+    }
+
+    // ==================== UTILITIES ====================
+    function isoAddDays(iso, n) {
+      const d = new Date(iso + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() + n);
+      return d.toISOString().slice(0, 10);
+    }
+    function daysBetween(startIso, endIso) {
+      const s = new Date(startIso + 'T00:00:00Z');
+      const e = new Date(endIso + 'T00:00:00Z');
+      return Math.round((e - s) / 86400000);
+    }
+    function formatDate(iso) {
+      if (!iso) return '';
+      const [y, m, d] = iso.split('-');
+      return parseInt(m) + '/' + parseInt(d) + '/' + y.slice(2);
+    }
+    function fmtPct(x, dp) {
+      if (dp === undefined) dp = 4;
+      return (x * 100).toFixed(dp) + '%';
+    }
+    function fmtNum(x, dp) {
+      if (dp === undefined) dp = 4;
+      return Number(x).toFixed(dp);
+    }
+    function isLeapYear(y) {
+      return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    }
+    function escapeHtml(s) {
+      if (s === null || s === undefined) return '';
+      return String(s).replace(/[&<>"']/g, c => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[c]));
+    }
+    function partnerById(id) {
+      return state.partners.find(p => p.id === id);
+    }
+    function partnerName(id) {
+      const p = partnerById(id);
+      return p ? p.name : id;
+    }
+
+    // ==================== DERIVATION ====================
+    // Replay all transactions against partner state to build:
+    //   - partnerShares: current share count per partner
+    //   - partnerHoldings: {partnerId: {assetId: units}}
+    //   - assets: {assetId: {id, createdDate, totalUnits, originatingTxId, originatingSellerId}}
+    //   - events: {assetId: [{date, ownership:{partnerId: units}}]}
+    //   - errors: any validation errors encountered
+    function derive() {
+      const partnersById = {};
+      for (const p of state.partners) partnersById[p.id] = p;
+
+      const partnerShares = {};
+      const partnerHoldings = {};
+      for (const p of state.partners) {
+        partnerShares[p.id] = Number(p.initialShares) || 0;
+        partnerHoldings[p.id] = {};
+      }
+
+      const assets = {};
+      const events = {};
+      const errors = [];
+
+      const txs = [...state.transactions].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        const na = parseInt(a.id.replace(/\D/g,'')) || 0;
+        const nb = parseInt(b.id.replace(/\D/g,'')) || 0;
+        return na - nb;
+      });
+
+      let assetCounter = 0;
+
+      for (const tx of txs) {
+        const txType = tx.type || 'purchase';
+
+        // ---- SHARE SPLIT ----
+        if (txType === 'split') {
+          const factor = Number(tx.factor);
+          if (!factor || factor <= 0) {
+            errors.push('Tx ' + tx.id + ' (' + tx.date + '): invalid split factor');
+            continue;
+          }
+          // Scale current state only; prior events untouched (historical accuracy)
+          for (const pid of Object.keys(partnerShares)) partnerShares[pid] *= factor;
+          for (const pid of Object.keys(partnerHoldings)) {
+            for (const aid of Object.keys(partnerHoldings[pid])) {
+              partnerHoldings[pid][aid] *= factor;
+            }
+          }
+          for (const aid of Object.keys(assets)) {
+            assets[aid].totalUnits *= factor;
+            // Record a new event at split date with post-split snapshot
+            const ownership = {};
+            for (const p of state.partners) {
+              const u = partnerHoldings[p.id][aid] || 0;
+              if (u > 0.0000001) ownership[p.id] = u;
+            }
+            if (!events[aid]) events[aid] = [];
+            events[aid].push({date: tx.date, ownership, totalUnits: assets[aid].totalUnits, splitFactor: factor});
+          }
+          continue;
+        }
+
+        // ---- PURCHASE or GIFT ----
+        const totalSeller = tx.sellers.reduce((s, x) => s + Number(x.shares), 0);
+        const totalBuyer = tx.buyers.reduce((s, x) => s + Number(x.shares), 0);
+
+        if (tx.sellers.length === 0) { errors.push('Tx ' + tx.id + ' (' + tx.date + '): no sellers'); continue; }
+        if (tx.buyers.length === 0) { errors.push('Tx ' + tx.id + ' (' + tx.date + '): no buyers'); continue; }
+        if (Math.abs(totalSeller - totalBuyer) > 0.00001) {
+          errors.push('Tx ' + tx.id + ' (' + tx.date + '): seller shares (' + totalSeller + ') ≠ buyer shares (' + totalBuyer + ')');
+          continue;
+        }
+        if (totalSeller === 0) { errors.push('Tx ' + tx.id + ' (' + tx.date + '): zero shares'); continue; }
+
+        const touched = new Set();
+        const pool = {};
+
+        // Sellers decompose → pool
+        let sellerError = false;
+        for (const s of tx.sellers) {
+          const sid = s.partnerId;
+          const shares = Number(s.shares);
+          if (!partnersById[sid]) {
+            errors.push('Tx ' + tx.id + ': unknown seller partner ' + sid);
+            sellerError = true;
+            break;
+          }
+          const total = partnerShares[sid];
+          if (shares > total + 0.00001) {
+            errors.push('Tx ' + tx.id + ' (' + tx.date + '): ' + sid + ' has ' + total + ' shares, tried to sell ' + shares);
+            sellerError = true;
+            break;
+          }
+          const fraction = shares / total;
+          for (const aid of Object.keys(partnerHoldings[sid])) {
+            const units = partnerHoldings[sid][aid];
+            if (units === 0) continue;
+            const transferred = fraction * units;
+            partnerHoldings[sid][aid] = units - transferred;
+            pool[aid] = (pool[aid] || 0) + transferred;
+            touched.add(aid);
+          }
+          partnerShares[sid] -= shares;
+        }
+        if (sellerError) continue;
+
+        // Buyers receive pool proportionally
+        let buyerError = false;
+        for (const b of tx.buyers) {
+          if (!partnersById[b.partnerId]) {
+            errors.push('Tx ' + tx.id + ': unknown buyer partner ' + b.partnerId);
+            buyerError = true;
+            break;
+          }
+          const bid = b.partnerId;
+          const shares = Number(b.shares);
+          const buyerFrac = shares / totalBuyer;
+          for (const aid of Object.keys(pool)) {
+            partnerHoldings[bid][aid] = (partnerHoldings[bid][aid] || 0) + buyerFrac * pool[aid];
+          }
+          partnerShares[bid] += shares;
+        }
+        if (buyerError) continue;
+
+        // Create one new §754 asset group per PURCHASE transaction (gifts skip this step)
+        if (txType === 'purchase') {
+          assetCounter++;
+          const newAid = 'A' + assetCounter;
+          assets[newAid] = {
+            id: newAid,
+            name: tx.assetName || '',
+            createdDate: tx.date,
+            totalUnits: totalSeller,
+            originatingTxId: tx.id,
+            originatingSellerIds: tx.sellers.map(s => s.partnerId),
+          };
+          touched.add(newAid);
+          for (const b of tx.buyers) {
+            const bid = b.partnerId;
+            partnerHoldings[bid][newAid] = (partnerHoldings[bid][newAid] || 0) + Number(b.shares);
+          }
+        }
+
+        // Record ownership events for every asset touched by this tx (stamped with current totalUnits)
+        for (const aid of touched) {
+          const ownership = {};
+          for (const p of state.partners) {
+            const u = partnerHoldings[p.id][aid] || 0;
+            if (u > 0.0000001) ownership[p.id] = u;
+          }
+          if (!events[aid]) events[aid] = [];
+          events[aid].push({date: tx.date, ownership, totalUnits: assets[aid].totalUnits});
+        }
+      }
+
+      // Clean up near-zero holdings
+      for (const pid of Object.keys(partnerHoldings)) {
+        for (const aid of Object.keys(partnerHoldings[pid])) {
+          if (Math.abs(partnerHoldings[pid][aid]) < 0.0000001) {
+            delete partnerHoldings[pid][aid];
+          }
+        }
+      }
+
+      return {partnerShares, partnerHoldings, assets, events, errors};
+    }
+
+    // ==================== ALLOCATION ====================
+    function computeAllocation(year, derived) {
+      const {assets, events} = derived;
+      const yearStart = year + '-01-01';
+      const yearEnd = year + '-12-31';
+      const result = [];
+
+      const sortedIds = Object.keys(assets).sort((a, b) => {
+        return parseInt(a.slice(1)) - parseInt(b.slice(1));
+      });
+
+      for (const aid of sortedIds) {
+        const asset = assets[aid];
+        const created = asset.createdDate;
+        if (created > yearEnd) continue;
+
+        const existStart = created > yearStart ? created : yearStart;
+        const existEnd = yearEnd;
+        const existDays = daysBetween(existStart, existEnd) + 1;
+
+        const assetEvents = events[aid] || [];
+
+        // State (ownership + totalUnits) at start of existence window
+        let stateAtStart = {ownership: {}, totalUnits: asset.totalUnits};
+        for (const e of assetEvents) {
+          if (e.date <= existStart) {
+            stateAtStart = {ownership: e.ownership, totalUnits: e.totalUnits != null ? e.totalUnits : asset.totalUnits};
+          }
+        }
+
+        // Events that fall inside the window
+        const yearEvents = assetEvents.filter(e => e.date > existStart && e.date <= existEnd);
+
+        // Build period list — each period carries its own totalUnits snapshot
+        const periods = [];
+        let curStart = existStart;
+        let curState = stateAtStart;
+        for (const e of yearEvents) {
+          const pEnd = isoAddDays(e.date, -1);
+          const days = daysBetween(curStart, pEnd) + 1;
+          periods.push({start: curStart, end: pEnd, days, ownership: curState.ownership, totalUnits: curState.totalUnits, splitFactor: null});
+          curStart = e.date;
+          curState = {ownership: e.ownership, totalUnits: e.totalUnits != null ? e.totalUnits : asset.totalUnits};
+        }
+        const finalDays = daysBetween(curStart, existEnd) + 1;
+        periods.push({start: curStart, end: existEnd, days: finalDays, ownership: curState.ownership, totalUnits: curState.totalUnits, splitFactor: null});
+
+        // Collect partners involved at any point in year
+        const partnerSet = new Set();
+        for (const p of periods) {
+          for (const pid of Object.keys(p.ownership)) partnerSet.add(pid);
+        }
+
+        const rows = [];
+        for (const p of state.partners) {
+          if (!partnerSet.has(p.id)) continue;
+          const contribs = [];
+          let total = 0;
+          for (const pd of periods) {
+            const units = pd.ownership[p.id] || 0;
+            const pct = pd.totalUnits > 0 ? units / pd.totalUnits : 0;
+            const dayFrac = pd.days / existDays;
+            const contribution = pct * dayFrac;
+            contribs.push({pct, dayFrac, days: pd.days, contribution, units, totalUnits: pd.totalUnits});
+            total += contribution;
+          }
+          rows.push({partnerId: p.id, contribs, total});
+        }
+
+        const yearEndTotalUnits = periods.length ? periods[periods.length - 1].totalUnits : asset.totalUnits;
+
+        result.push({
+          asset,
+          existStart,
+          existEnd,
+          existDays,
+          periods,
+          rows,
+          yearEndTotalUnits,
+        });
+      }
+
+      return result;
+    }
+
+    // ==================== RENDERING ====================
+    function renderAll() {
+      renderPartners();
+      renderTransactions();
+      renderAllocation();
+    }
+
+    // ---- Partners tab ----
+    function renderPartners() {
+      const gd = document.getElementById('genesis-date');
+      gd.value = state.genesisDate || '';
+      const derived = derive();
+      const {partnerShares, partnerHoldings, errors} = derived;
+
+      const tbody = document.getElementById('partners-tbody');
+      tbody.innerHTML = '';
+      if (state.partners.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="meta" style="text-align:center;padding:16px;">No partners yet. Add one below.</td></tr>';
+      }
+      for (const p of state.partners) {
+        const holdings = partnerHoldings[p.id] || {};
+        const holdingsList = Object.entries(holdings)
+          .sort((a, b) => parseInt(a[0].slice(1)) - parseInt(b[0].slice(1)))
+          .map(([aid, u]) => aid + ': ' + fmtNum(u, 4))
+          .join(', ');
+        const canDelete = (p.initialShares === 0 || state.transactions.length === 0) && !Object.keys(holdings).length;
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+          '<td class="mono">' + escapeHtml(p.id) + '</td>' +
+          '<td><input data-edit-name="' + escapeHtml(p.id) + '" value="' + escapeHtml(p.name) + '" style="width:160px;"></td>' +
+          '<td class="num"><input type="number" step="any" min="0" data-edit-shares="' + escapeHtml(p.id) + '" value="' + escapeHtml(p.initialShares) + '" style="width:90px;"></td>' +
+          '<td class="num">' + fmtNum(partnerShares[p.id] || 0, 4) + '</td>' +
+          '<td class="num mono" style="font-size:12px;">' + escapeHtml(holdingsList || '—') + '</td>' +
+          '<td>' +
+            '<button class="danger" data-delete-partner="' + escapeHtml(p.id) + '"' + (canDelete ? '' : ' disabled title="Clear their transactions first"') + '>Delete</button>' +
+          '</td>';
+        tbody.appendChild(tr);
+      }
+
+      // Render errors
+      const errBox = document.getElementById('partners-errors');
+      errBox.innerHTML = '';
+      if (errors.length) {
+        errBox.innerHTML = '<div class="error"><strong>Derivation errors:</strong><br>' +
+          errors.map(e => '• ' + escapeHtml(e)).join('<br>') + '</div>';
+      }
+
+      // Bind edits
+      tbody.querySelectorAll('[data-edit-name]').forEach(el => {
+        el.onchange = () => {
+          const pid = el.dataset.editName;
+          const p = partnerById(pid);
+          if (p) { p.name = el.value; save(); renderAll(); }
+        };
+      });
+      tbody.querySelectorAll('[data-edit-shares]').forEach(el => {
+        el.onchange = () => {
+          const pid = el.dataset.editShares;
+          const p = partnerById(pid);
+          if (p) { p.initialShares = Number(el.value) || 0; save(); renderAll(); }
+        };
+      });
+      tbody.querySelectorAll('[data-delete-partner]').forEach(el => {
+        el.onclick = () => {
+          const pid = el.dataset.deletePartner;
+          if (!confirm('Delete ' + partnerName(pid) + '?')) return;
+          state.partners = state.partners.filter(p => p.id !== pid);
+          save(); renderAll();
+        };
+      });
+    }
+
+    // ---- Transactions tab ----
+    let sellerRowId = 0, buyerRowId = 0;
+
+    function makePartyRow(type, preset) {
+      const counter = type === 'seller' ? ++sellerRowId : ++buyerRowId;
+      const id = (type === 'seller' ? 'sr' : 'br') + counter;
+      const div = document.createElement('div');
+      div.className = 'row';
+      div.dataset.partyRow = type;
+      div.dataset.rowId = id;
+      const select = document.createElement('select');
+      select.required = true;
+      select.className = type + '-partner';
+      select.innerHTML = '<option value="">-- select partner --</option>' +
+        state.partners.map(p => '<option value="' + escapeHtml(p.id) + '"' + (preset && preset.partnerId === p.id ? ' selected' : '') + '>' + escapeHtml(p.id) + ' · ' + escapeHtml(p.name) + '</option>').join('');
+      const input = document.createElement('input');
+      input.type = 'number'; input.step = 'any'; input.min = '0'; input.required = true;
+      input.className = type + '-shares';
+      input.placeholder = 'Shares';
+      if (preset) input.value = preset.shares;
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button'; removeBtn.className = 'danger'; removeBtn.textContent = 'Remove';
+      removeBtn.onclick = () => div.remove();
+      div.appendChild(select); div.appendChild(input); div.appendChild(removeBtn);
+      return div;
+    }
+
+    function resetTxForm() {
+      document.getElementById('tx-date').value = '';
+      const nameEl = document.getElementById('tx-asset-name');
+      if (nameEl) nameEl.value = '';
+      document.getElementById('tx-type').value = 'purchase';
+      document.getElementById('tx-split-factor').value = '';
+      const sRows = document.getElementById('sellers-rows');
+      const bRows = document.getElementById('buyers-rows');
+      sRows.innerHTML = ''; bRows.innerHTML = '';
+      sRows.appendChild(makePartyRow('seller'));
+      bRows.appendChild(makePartyRow('buyer'));
+      document.getElementById('tx-validation').textContent = '';
+      applyTxFormVisibility();
+    }
+
+    function applyTxFormVisibility() {
+      const t = document.getElementById('tx-type').value;
+      const isSplit = t === 'split';
+      const isGift = t === 'gift';
+      document.getElementById('tx-split-row').style.display = isSplit ? 'block' : 'none';
+      document.getElementById('tx-sellers-fs').style.display = isSplit ? 'none' : 'block';
+      document.getElementById('tx-buyers-fs').style.display = isSplit ? 'none' : 'block';
+      // Update legend labels
+      document.getElementById('tx-sellers-legend').innerHTML = (isGift ? 'Donors' : 'Sellers') +
+        ' &nbsp;<span class="meta" style="text-transform:none;letter-spacing:0;">— ' +
+        (isGift ? 'partners giving up shares' : 'all sellers contribute to one pooled §754 asset group') + '</span>';
+      document.getElementById('tx-buyers-legend').innerHTML = (isGift ? 'Recipients' : 'Buyers') +
+        ' &nbsp;<span class="meta" style="text-transform:none;letter-spacing:0;">— ' +
+        (isGift ? 'partners receiving the gifted shares (no §754 step-up)' : "each buyer's units in the new asset group = the shares they bought") + '</span>';
+      document.getElementById('tx-name-label').textContent = isSplit ? 'Note (optional):' : isGift ? 'Note (optional):' : 'Asset name (optional):';
+    }
+
+    function renderTransactions() {
+      // Rebuild party selects (reflect current partners)
+      const sRows = document.getElementById('sellers-rows');
+      const bRows = document.getElementById('buyers-rows');
+      if (sRows.children.length === 0) sRows.appendChild(makePartyRow('seller'));
+      if (bRows.children.length === 0) bRows.appendChild(makePartyRow('buyer'));
+
+      // Refresh selects with latest partner list
+      [...sRows.querySelectorAll('select.seller-partner'), ...bRows.querySelectorAll('select.buyer-partner')].forEach(sel => {
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">-- select partner --</option>' +
+          state.partners.map(p => '<option value="' + escapeHtml(p.id) + '"' + (cur === p.id ? ' selected' : '') + '>' + escapeHtml(p.id) + ' · ' + escapeHtml(p.name) + '</option>').join('');
+      });
+
+      // Ledger
+      const ledger = document.getElementById('tx-ledger');
+      ledger.innerHTML = '';
+      if (state.transactions.length === 0) {
+        ledger.innerHTML = '<div class="meta" style="padding:12px;">No transactions yet.</div>';
+        return;
+      }
+
+      const derived = derive();
+      const {assets, events, errors} = derived;
+
+      // Replay to show per-tx lot decomposition (re-derive with breadcrumbs)
+      const breadcrumbs = buildTxBreadcrumbs();
+
+      const sortedTxs = [...state.transactions].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return parseInt(a.id.replace(/\D/g,''))-parseInt(b.id.replace(/\D/g,''));
+      });
+
+      for (const tx of sortedTxs) {
+        const bc = breadcrumbs[tx.id] || {};
+        const txType = tx.type || 'purchase';
+        const entry = document.createElement('div');
+        entry.className = 'ledger-entry tx-type-' + txType;
+
+        const typeBadge = txType === 'purchase'
+          ? '<span class="badge" style="background:var(--accent-light);color:var(--accent);">PURCHASE</span>'
+          : txType === 'gift'
+            ? '<span class="badge" style="background:var(--good-light);color:var(--good);">GIFT</span>'
+            : '<span class="badge" style="background:var(--warn-light);color:var(--warn);">SPLIT ' + (tx.factor ? fmtNum(tx.factor, 4).replace(/\.?0+$/,'') + ':1' : '?') + '</span>';
+
+        let summaryHtml;
+        if (txType === 'split') {
+          summaryHtml = (tx.assetName ? '<em>' + escapeHtml(tx.assetName) + '</em> &nbsp;·&nbsp; ' : '') +
+            'All share counts and §754 unit holdings scaled by factor ' + fmtNum(Number(tx.factor) || 0, 4);
+        } else {
+          const sellerSummary = tx.sellers.map(s => escapeHtml(s.partnerId) + ': ' + fmtNum(s.shares, 2)).join(', ');
+          const buyerSummary = tx.buyers.map(b => escapeHtml(b.partnerId) + ': ' + fmtNum(b.shares, 2)).join(', ');
+          const na = bc.newAsset;
+          const newAssetLabel = na
+            ? '<span class="badge accent">' + escapeHtml(na.id) + '</span>' +
+              (na.name ? ' <span class="asset-name">' + escapeHtml(na.name) + '</span>' : '')
+            : '<span class="asset-name">none (ownership transferred without §754 step-up)</span>';
+          const sellerLabel = txType === 'gift' ? 'Donors' : 'Sellers';
+          const buyerLabel = txType === 'gift' ? 'Recipients' : 'Buyers';
+          summaryHtml =
+            '<strong>' + sellerLabel + ':</strong> ' + sellerSummary +
+            ' &nbsp;→&nbsp; <strong>' + buyerLabel + ':</strong> ' + buyerSummary +
+            ' &nbsp;·&nbsp; <strong>Creates:</strong> ' + newAssetLabel;
+        }
+
+        entry.innerHTML =
+          '<div class="ledger-head">' +
+            '<div style="display:flex;align-items:center;flex:1;gap:8px;">' +
+              '<span class="arrow-toggle">▶</span>' +
+              '<span class="ledger-date">' + escapeHtml(tx.id) + ' · ' + formatDate(tx.date) + '</span>' +
+              typeBadge +
+              '<span class="ledger-summary">' + summaryHtml + '</span>' +
+            '</div>' +
+            '<div class="ledger-actions">' +
+              (txType === 'purchase' ? '<button class="secondary" data-rename-tx="' + escapeHtml(tx.id) + '" style="padding:3px 10px;font-size:12px;">Rename</button>' : '') +
+              '<button class="danger" data-delete-tx="' + escapeHtml(tx.id) + '">Delete</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ledger-details">' + renderLedgerDetail(tx, bc) + '</div>';
+
+        // Expand on click of header
+        entry.querySelector('.ledger-head').onclick = (e) => {
+          if (e.target.closest('.ledger-actions')) return;
+          entry.classList.toggle('expanded');
+        };
+        ledger.appendChild(entry);
+      }
+
+      ledger.querySelectorAll('[data-delete-tx]').forEach(el => {
+        el.onclick = (e) => {
+          e.stopPropagation();
+          const tid = el.dataset.deleteTx;
+          if (!confirm('Delete transaction ' + tid + '? This will re-number subsequent §754 asset IDs.')) return;
+          state.transactions = state.transactions.filter(t => t.id !== tid);
+          save(); renderAll();
+        };
+      });
+      ledger.querySelectorAll('[data-rename-tx]').forEach(el => {
+        el.onclick = (e) => {
+          e.stopPropagation();
+          const tid = el.dataset.renameTx;
+          openRenameModal(tid);
+        };
+      });
+
+      // Error banner
+      if (errors.length) {
+        const banner = document.createElement('div');
+        banner.className = 'error';
+        banner.innerHTML = '<strong>Errors in transaction log:</strong><br>' + errors.map(e => '• ' + escapeHtml(e)).join('<br>');
+        ledger.insertBefore(banner, ledger.firstChild);
+      }
+    }
+
+    // Build an overlay map (txId -> breadcrumb info) by replaying transactions and recording per-tx effects.
+    function buildTxBreadcrumbs() {
+      const partnerShares = {};
+      const partnerHoldings = {};
+      for (const p of state.partners) {
+        partnerShares[p.id] = Number(p.initialShares) || 0;
+        partnerHoldings[p.id] = {};
+      }
+      const txs = [...state.transactions].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return parseInt(a.id.replace(/\D/g,''))-parseInt(b.id.replace(/\D/g,''));
+      });
+      let assetCounter = 0;
+      const result = {};
+
+      for (const tx of txs) {
+        const txType = tx.type || 'purchase';
+        const bc = {
+          txType,
+          sellerDecomp: [],
+          pool: {},
+          buyerAllocs: [],
+          newAsset: null,
+          splitInfo: null,
+        };
+
+        // ---- SPLIT ----
+        if (txType === 'split') {
+          const factor = Number(tx.factor);
+          if (!factor || factor <= 0) { result[tx.id] = bc; continue; }
+          const shareChanges = [];
+          const assetChanges = {};  // assetId -> {partnerId: {before, after}}
+          for (const pid of Object.keys(partnerShares)) {
+            const before = partnerShares[pid];
+            partnerShares[pid] *= factor;
+            if (before > 0 || partnerShares[pid] > 0) {
+              shareChanges.push({partnerId: pid, before, after: partnerShares[pid]});
+            }
+          }
+          for (const pid of Object.keys(partnerHoldings)) {
+            for (const aid of Object.keys(partnerHoldings[pid])) {
+              const before = partnerHoldings[pid][aid];
+              partnerHoldings[pid][aid] *= factor;
+              if (!assetChanges[aid]) assetChanges[aid] = {};
+              assetChanges[aid][pid] = {before, after: partnerHoldings[pid][aid]};
+            }
+          }
+          bc.splitInfo = {factor, shareChanges, assetChanges};
+          result[tx.id] = bc;
+          continue;
+        }
+
+        // ---- PURCHASE or GIFT ----
+        const totalSeller = tx.sellers.reduce((s,x) => s + Number(x.shares), 0);
+        const totalBuyer = tx.buyers.reduce((s,x) => s + Number(x.shares), 0);
+
+        if (Math.abs(totalSeller - totalBuyer) > 0.00001 || totalSeller === 0 || tx.sellers.length === 0 || tx.buyers.length === 0) {
+          result[tx.id] = bc;
+          continue;
+        }
+
+        let valid = true;
+        for (const s of tx.sellers) {
+          if (!partnerHoldings[s.partnerId]) { valid = false; break; }
+          const total = partnerShares[s.partnerId];
+          if (Number(s.shares) > total + 0.00001) { valid = false; break; }
+        }
+        if (!valid) { result[tx.id] = bc; continue; }
+
+        for (const s of tx.sellers) {
+          const sid = s.partnerId;
+          const total = partnerShares[sid];
+          const shares = Number(s.shares);
+          const fraction = shares / total;
+          const lotsTransferred = {};
+          for (const aid of Object.keys(partnerHoldings[sid])) {
+            const units = partnerHoldings[sid][aid];
+            const transferred = fraction * units;
+            partnerHoldings[sid][aid] = units - transferred;
+            bc.pool[aid] = (bc.pool[aid] || 0) + transferred;
+            lotsTransferred[aid] = transferred;
+          }
+          partnerShares[sid] -= shares;
+          bc.sellerDecomp.push({partnerId: sid, totalBefore: total, sharesSold: shares, fraction, lotsTransferred});
+        }
+        for (const b of tx.buyers) {
+          const bid = b.partnerId;
+          const shares = Number(b.shares);
+          const fraction = shares / totalBuyer;
+          const lotsGained = {};
+          for (const aid of Object.keys(bc.pool)) {
+            const units = fraction * bc.pool[aid];
+            partnerHoldings[bid][aid] = (partnerHoldings[bid][aid] || 0) + units;
+            lotsGained[aid] = units;
+          }
+          partnerShares[bid] += shares;
+          bc.buyerAllocs.push({partnerId: bid, boughtShares: shares, fraction, lotsGained});
+        }
+        // One asset per PURCHASE tx, pooled across all sellers (gifts skip this)
+        if (txType === 'purchase') {
+          assetCounter++;
+          const aid = 'A' + assetCounter;
+          const ownership = {};
+          for (const b of tx.buyers) {
+            const bid = b.partnerId;
+            const units = Number(b.shares);
+            partnerHoldings[bid][aid] = (partnerHoldings[bid][aid] || 0) + units;
+            ownership[bid] = units;
+          }
+          bc.newAsset = {
+            id: aid,
+            name: tx.assetName || '',
+            sellerIds: tx.sellers.map(s => s.partnerId),
+            totalUnits: totalSeller,
+            ownership,
+          };
+        }
+
+        result[tx.id] = bc;
+      }
+      return result;
+    }
+
+    function renderLedgerDetail(tx, bc) {
+      const sections = [];
+
+      // Split detail
+      if ((tx.type || 'purchase') === 'split' && bc.splitInfo) {
+        const si = bc.splitInfo;
+        const shareRows = si.shareChanges.map(c =>
+          '<tr><td class="mono">' + escapeHtml(c.partnerId) + '</td><td class="num">' + fmtNum(c.before, 4) + '</td><td class="num">' + fmtNum(c.after, 4) + '</td></tr>'
+        ).join('');
+        sections.push('<h5>Share-count scaling (factor × ' + fmtNum(si.factor, 4) + ')</h5><table><thead><tr><th>Partner</th><th class="num">Before</th><th class="num">After</th></tr></thead><tbody>' + shareRows + '</tbody></table>');
+
+        const assetIds = Object.keys(si.assetChanges).sort((a,b) => parseInt(a.slice(1))-parseInt(b.slice(1)));
+        if (assetIds.length) {
+          let assetRowsHtml = '';
+          for (const aid of assetIds) {
+            const changes = si.assetChanges[aid];
+            const parts = Object.entries(changes)
+              .map(([pid, c]) => escapeHtml(pid) + ': ' + fmtNum(c.before, 4) + ' → ' + fmtNum(c.after, 4))
+              .join(', ');
+            assetRowsHtml += '<tr><td><span class="badge accent">' + escapeHtml(aid) + '</span></td><td style="font-family:var(--mono);font-size:12px;">' + parts + '</td></tr>';
+          }
+          sections.push('<h5>§754 unit-count scaling on existing assets</h5><table><thead><tr><th>Asset</th><th>Per-partner unit change</th></tr></thead><tbody>' + assetRowsHtml + '</tbody></table>');
+        }
+        return sections.join('');
+      }
+
+      // Seller decomposition
+      if (bc.sellerDecomp && bc.sellerDecomp.length) {
+        const rows = bc.sellerDecomp.map(d => {
+          const lotStr = Object.keys(d.lotsTransferred).length
+            ? Object.entries(d.lotsTransferred).map(([aid, u]) => escapeHtml(aid) + ': ' + fmtNum(u, 4)).join(', ')
+            : 'pre-754 shares only';
+          return '<tr>' +
+            '<td class="mono">' + escapeHtml(d.partnerId) + '</td>' +
+            '<td class="num">' + fmtNum(d.totalBefore, 4) + '</td>' +
+            '<td class="num">' + fmtNum(d.sharesSold, 4) + '</td>' +
+            '<td class="num">' + fmtNum(d.fraction, 4) + '</td>' +
+            '<td style="font-family:var(--mono);font-size:12px;">' + escapeHtml(lotStr) + '</td>' +
+          '</tr>';
+        }).join('');
+        sections.push('<h5>Seller Lot Decomposition</h5><table><thead><tr><th>Partner</th><th class="num">Shares Before</th><th class="num">Sold</th><th class="num">Fraction</th><th>Lots Transferred to Pool</th></tr></thead><tbody>' + rows + '</tbody></table>');
+      }
+
+      // Pool + buyer distribution
+      if (bc.buyerAllocs && bc.buyerAllocs.length) {
+        const poolStr = Object.keys(bc.pool).length
+          ? Object.entries(bc.pool).map(([aid,u]) => escapeHtml(aid) + ': ' + fmtNum(u, 4)).join(', ')
+          : 'pre-754 only (no prior §754 lots transferred)';
+        const rows = bc.buyerAllocs.map(a => {
+          const gainedStr = Object.keys(a.lotsGained).length
+            ? Object.entries(a.lotsGained).map(([aid,u]) => escapeHtml(aid) + ': ' + fmtNum(u, 4)).join(', ')
+            : '—';
+          return '<tr>' +
+            '<td class="mono">' + escapeHtml(a.partnerId) + '</td>' +
+            '<td class="num">' + fmtNum(a.boughtShares, 4) + '</td>' +
+            '<td class="num">' + fmtNum(a.fraction, 4) + '</td>' +
+            '<td style="font-family:var(--mono);font-size:12px;">' + escapeHtml(gainedStr) + '</td>' +
+          '</tr>';
+        }).join('');
+        sections.push('<h5>Pool → Buyer Allocation</h5>' +
+          '<div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">Pool contents: <span class="mono">' + poolStr + '</span></div>' +
+          '<table><thead><tr><th>Partner</th><th class="num">Shares Bought</th><th class="num">Pool Fraction</th><th>Lots Received</th></tr></thead><tbody>' + rows + '</tbody></table>');
+      }
+
+      // New asset created (one per tx)
+      if (bc.newAsset) {
+        const a = bc.newAsset;
+        const ownStr = Object.entries(a.ownership)
+          .map(([bid, u]) => escapeHtml(bid) + ': ' + fmtNum(u, 4) + ' units (' + fmtPct(u / a.totalUnits, 2) + ')')
+          .join(', ');
+        const sellersStr = a.sellerIds.join(', ');
+        const nameCell = a.name
+          ? '<span class="badge accent">' + escapeHtml(a.id) + '</span> <span class="asset-name">' + escapeHtml(a.name) + '</span>'
+          : '<span class="badge accent">' + escapeHtml(a.id) + '</span>';
+        const row = '<tr>' +
+          '<td>' + nameCell + '</td>' +
+          '<td class="mono">' + escapeHtml(sellersStr) + '</td>' +
+          '<td class="num">' + fmtNum(a.totalUnits, 4) + '</td>' +
+          '<td style="font-family:var(--mono);font-size:12px;">' + ownStr + '</td>' +
+        '</tr>';
+        sections.push('<h5>New §754 Asset Group Created</h5><table><thead><tr><th>Asset</th><th>From Seller(s)</th><th class="num">Total Units</th><th>Ownership</th></tr></thead><tbody>' + row + '</tbody></table>');
+      }
+
+      if (!sections.length) return '<div class="meta">No breakdown — invalid transaction.</div>';
+      return sections.join('');
+    }
+
+    // ---- Allocation tab ----
+    function renderAllocation() {
+      const yearSel = document.getElementById('alloc-year');
+      const curYear = yearSel.value || getDefaultYear();
+      yearSel.innerHTML = '';
+      const years = allRelevantYears();
+      for (const y of years) {
+        const opt = document.createElement('option');
+        opt.value = y; opt.textContent = y;
+        if (String(y) === String(curYear)) opt.selected = true;
+        yearSel.appendChild(opt);
+      }
+
+      const year = parseInt(yearSel.value);
+      const showZero = document.getElementById('alloc-show-zero').checked;
+      const derived = derive();
+      const allocs = computeAllocation(year, derived);
+
+      const content = document.getElementById('alloc-content');
+      content.innerHTML = '';
+
+      if (derived.errors.length) {
+        const banner = document.createElement('div');
+        banner.className = 'error';
+        banner.innerHTML = '<strong>Resolve transaction errors before trusting allocation output:</strong><br>' + derived.errors.map(e => '• ' + escapeHtml(e)).join('<br>');
+        content.appendChild(banner);
+      }
+
+      if (!allocs.length) {
+        content.innerHTML += '<div class="hint warn">No §754 assets exist in ' + year + '. Either the year has no asset activity, or transactions haven\'t been entered yet.</div>';
+        return;
+      }
+
+      for (const a of allocs) {
+        content.appendChild(renderAssetAllocationCard(a, year, showZero));
+      }
+
+      // Render a cross-asset summary at the bottom
+      content.appendChild(renderAllocationSummary(allocs, year, showZero));
+    }
+
+    function renderAssetAllocationCard(alloc, year, showZero) {
+      const {asset, existStart, existEnd, existDays, periods, rows, yearEndTotalUnits} = alloc;
+      const card = document.createElement('div');
+      card.className = 'asset-card';
+
+      const sellerIds = asset.originatingSellerIds || (asset.originatingSellerId ? [asset.originatingSellerId] : []);
+      const sellerLabel = sellerIds.length <= 1
+        ? 'seller: ' + (sellerIds[0] ? escapeHtml(sellerIds[0]) : '?')
+        : 'sellers: ' + sellerIds.map(escapeHtml).join(', ');
+
+      // Detect split activity within year (periods with different totalUnits)
+      const unitsChanged = periods.some((p, i) => i > 0 && p.totalUnits !== periods[i-1].totalUnits);
+      const unitsSummary = unitsChanged
+        ? fmtNum(periods[0].totalUnits, 4) + ' → ' + fmtNum(yearEndTotalUnits, 4) + ' units (split in year)'
+        : fmtNum(yearEndTotalUnits, 4) + ' total units';
+
+      const header = document.createElement('div');
+      header.className = 'asset-header';
+      header.innerHTML =
+        '<div class="title">' +
+          '<span class="badge accent" style="font-size:14px;">' + escapeHtml(asset.id) + '</span>' +
+          (asset.name ? ' <span class="asset-name-title">' + escapeHtml(asset.name) + '</span>' : '') +
+          ' — ' + year + ' Allocation' +
+        '</div>' +
+        '<div class="subtitle">' +
+          'Created ' + formatDate(asset.createdDate) + ' from transaction ' + escapeHtml(asset.originatingTxId) + ' (' + sellerLabel + ') &nbsp;·&nbsp; ' +
+          existDays + ' days in ' + year + ' (' + formatDate(existStart) + ' – ' + formatDate(existEnd) + ') &nbsp;·&nbsp; ' +
+          unitsSummary +
+        '</div>';
+      card.appendChild(header);
+
+      // Build table
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      headRow.innerHTML = '<th>Partner</th>';
+      periods.forEach((p, idx) => {
+        headRow.innerHTML += '<th class="period-header">' +
+          '<div class="period-dates">Period ' + (idx + 1) + '</div>' +
+          '<div class="period-dates">' + formatDate(p.start) + ' – ' + formatDate(p.end) + '</div>' +
+          '<div class="period-days">' + p.days + ' / ' + existDays + ' days</div>' +
+          '</th>';
+      });
+      headRow.innerHTML += '<th class="num">' + year + ' %</th>';
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+
+      // Rows we display — include zero-only partners if toggled on
+      let displayRows = rows;
+      if (showZero) {
+        const rowById = {};
+        for (const r of rows) rowById[r.partnerId] = r;
+        displayRows = state.partners
+          .filter(p => p.initialShares > 0 || rowById[p.id])
+          .map(p => rowById[p.id] || {
+            partnerId: p.id,
+            contribs: periods.map(() => ({pct: 0, dayFrac: 0, days: 0, contribution: 0})),
+            total: 0,
+          });
+      } else {
+        // Drop rows with 0 total to keep output crisp
+        displayRows = displayRows.filter(r => r.total > 0.00000001);
+      }
+
+      for (const r of displayRows) {
+        const tr = document.createElement('tr');
+        let html = '<td><span class="mono">' + escapeHtml(r.partnerId) + '</span> · ' + escapeHtml(partnerName(r.partnerId)) + '</td>';
+        r.contribs.forEach((c, idx) => {
+          const p = periods[idx];
+          html += '<td class="math-cell">' +
+            '<span class="units">' + fmtNum(c.units, 4) + ' units</span> <span class="units-sub">of ' + fmtNum(c.totalUnits, 4) + '</span><br>' +
+            '<span class="ownership">' + fmtPct(c.pct, 4) + '</span> ' +
+            '<span class="day-frac">× ' + p.days + '/' + existDays + '</span><br>' +
+            '<span class="equals">=</span><span class="result">' + fmtPct(c.contribution, 4) + '</span>' +
+            '</td>';
+        });
+        html += '<td class="num"><strong>' + fmtPct(r.total, 4) + '</strong></td>';
+        tr.innerHTML = html;
+        tbody.appendChild(tr);
+      }
+
+      // Total row — column totals + grand total should be 100%
+      const totalRow = document.createElement('tr');
+      totalRow.className = 'total-row';
+      let totalHtml = '<td><strong>Total</strong></td>';
+      let grand = 0;
+      periods.forEach(p => {
+        const colFrac = p.days / existDays;
+        totalHtml += '<td class="math-cell">' +
+          '<span class="units">' + fmtNum(p.totalUnits, 4) + ' units</span><br>' +
+          '<span class="ownership">100.0000%</span> ' +
+          '<span class="day-frac">× ' + p.days + '/' + existDays + '</span><br>' +
+          '<span class="equals">=</span><span class="result">' + fmtPct(colFrac, 4) + '</span>' +
+          '</td>';
+        grand += colFrac;
+      });
+      totalHtml += '<td class="num"><strong>' + fmtPct(grand, 4) + '</strong></td>';
+      totalRow.innerHTML = totalHtml;
+      tbody.appendChild(totalRow);
+
+      table.appendChild(tbody);
+      card.appendChild(table);
+      return card;
+    }
+
+    function renderAllocationSummary(allocs, year, showZero) {
+      const wrap = document.createElement('div');
+      wrap.className = 'asset-card';
+      const header = document.createElement('div');
+      header.className = 'asset-header';
+      header.innerHTML = '<div class="title">Summary — All §754 Asset Groups · ' + year + '</div>' +
+        '<div class="subtitle">Quick cross-asset matrix. Apply each % to that asset\'s ' + year + ' workpaper depreciation amount to get per-partner dollars.</div>';
+      wrap.appendChild(header);
+
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      let hh = '<tr><th>Partner</th>';
+      for (const a of allocs) {
+        hh += '<th class="num"><span class="badge accent">' + escapeHtml(a.asset.id) + '</span>' +
+          (a.asset.name ? '<br><span class="asset-name">' + escapeHtml(a.asset.name) + '</span>' : '') +
+          '</th>';
+      }
+      hh += '</tr>';
+      thead.innerHTML = hh;
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      const partnerRows = {};
+      for (const a of allocs) {
+        for (const r of a.rows) {
+          if (!partnerRows[r.partnerId]) partnerRows[r.partnerId] = {};
+          partnerRows[r.partnerId][a.asset.id] = r.total;
+        }
+      }
+
+      let orderedPartners = state.partners.map(p => p.id);
+      if (!showZero) {
+        orderedPartners = orderedPartners.filter(pid => partnerRows[pid] && Object.values(partnerRows[pid]).some(v => v > 0.00000001));
+      }
+
+      for (const pid of orderedPartners) {
+        let row = '<td><span class="mono">' + escapeHtml(pid) + '</span> · ' + escapeHtml(partnerName(pid)) + '</td>';
+        for (const a of allocs) {
+          const pct = (partnerRows[pid] && partnerRows[pid][a.asset.id]) || 0;
+          row += '<td class="num">' + (pct > 0 ? fmtPct(pct, 4) : '—') + '</td>';
+        }
+        tbody.appendChild(Object.assign(document.createElement('tr'), {innerHTML: row}));
+      }
+      // Totals row
+      const tr = document.createElement('tr');
+      tr.className = 'total-row';
+      let totRow = '<td><strong>Total</strong></td>';
+      for (const a of allocs) {
+        const sum = a.rows.reduce((s, r) => s + r.total, 0);
+        totRow += '<td class="num"><strong>' + fmtPct(sum, 4) + '</strong></td>';
+      }
+      tr.innerHTML = totRow;
+      tbody.appendChild(tr);
+
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      return wrap;
+    }
+
+    function allRelevantYears() {
+      const years = new Set();
+      const gd = state.genesisDate;
+      if (gd) years.add(parseInt(gd.slice(0,4)));
+      for (const tx of state.transactions) {
+        if (tx.date) years.add(parseInt(tx.date.slice(0,4)));
+      }
+      // Add one year past last year for projection
+      if (years.size) {
+        const maxY = Math.max(...years);
+        years.add(maxY + 1);
+      } else {
+        years.add(new Date().getFullYear());
+      }
+      return [...years].sort((a,b) => a-b);
+    }
+    function getDefaultYear() {
+      const years = allRelevantYears();
+      // Default to the latest year with activity (not the +1 projection)
+      if (years.length >= 2) return years[years.length - 2];
+      return years[0];
+    }
+
+    // ==================== EXPORT / IMPORT ====================
+    function exportAllocationCsv() {
+      const year = parseInt(document.getElementById('alloc-year').value);
+      const derived = derive();
+      const allocs = computeAllocation(year, derived);
+
+      const q = s => '"' + String(s).replace(/"/g,'""') + '"';
+      const lines = [];
+      lines.push(['Year','Asset','AssetName','Partner','PartnerName','Period','StartDate','EndDate','Days','DaysInYear','UnitsOwned','TotalUnits','Ownership%','DayFraction','Contribution%','RowTotal%'].join(','));
+
+      for (const a of allocs) {
+        for (const r of a.rows) {
+          r.contribs.forEach((c, idx) => {
+            const p = a.periods[idx];
+            lines.push([
+              year,
+              a.asset.id,
+              q(a.asset.name || ''),
+              r.partnerId,
+              q(partnerName(r.partnerId)),
+              'Period ' + (idx + 1),
+              p.start,
+              p.end,
+              p.days,
+              a.existDays,
+              c.units.toFixed(6),
+              c.totalUnits.toFixed(6),
+              (c.pct * 100).toFixed(6) + '%',
+              (c.dayFrac).toFixed(6),
+              (c.contribution * 100).toFixed(6) + '%',
+              (r.total * 100).toFixed(6) + '%',
+            ].join(','));
+          });
+        }
+      }
+      // Also include a summary sheet appended
+      lines.push('');
+      lines.push('Summary Matrix');
+      const header = ['Partner','PartnerName'].concat(allocs.map(a => a.asset.id + (a.asset.name ? ' · ' + a.asset.name : '')));
+      lines.push(header.map(h => q(h)).join(','));
+      for (const p of state.partners) {
+        const row = [p.id, q(p.name)];
+        for (const a of allocs) {
+          const r = a.rows.find(x => x.partnerId === p.id);
+          row.push(r ? (r.total * 100).toFixed(6) + '%' : '');
+        }
+        lines.push(row.join(','));
+      }
+
+      const blob = new Blob([lines.join('\n')], {type: 'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'section754-allocation-' + year + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportJson() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'section754-state-' + new Date().toISOString().slice(0,10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJson() {
+      document.getElementById('import-file').click();
+    }
+
+    // ==================== EVENT BINDING ====================
+    function bindEvents() {
+      // Tabs
+      document.querySelectorAll('nav.tabs button').forEach(btn => {
+        btn.onclick = () => {
+          const t = btn.dataset.tab;
+          document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById('tab-' + t).classList.add('active');
+        };
+      });
+
+      // Genesis date
+      document.getElementById('genesis-date').onchange = (e) => {
+        state.genesisDate = e.target.value;
+        save();
+      };
+
+      // Add partner
+      document.getElementById('add-partner').onclick = () => {
+        const newId = 'P' + state.nextPartnerNum++;
+        state.partners.push({id: newId, name: 'Partner ' + newId.slice(1), initialShares: 0});
+        save();
+        renderAll();
+      };
+
+      // Tx form — add rows
+      document.getElementById('add-seller').onclick = () => {
+        document.getElementById('sellers-rows').appendChild(makePartyRow('seller'));
+      };
+      document.getElementById('add-buyer').onclick = () => {
+        document.getElementById('buyers-rows').appendChild(makePartyRow('buyer'));
+      };
+      document.getElementById('tx-form-reset').onclick = resetTxForm;
+      document.getElementById('tx-type').onchange = applyTxFormVisibility;
+
+      // Tx paste import
+      document.getElementById('paste-tx').onclick = openTxImportModal;
+      document.getElementById('txi-cancel').onclick = closeTxImportModal;
+      document.getElementById('txi-parse').onclick = previewTxImport;
+      document.getElementById('txi-apply').onclick = applyTxImport;
+      document.getElementById('txi-type').onchange = () => {
+        const t = document.getElementById('txi-type').value;
+        document.getElementById('txi-factor-row').style.display = (t === 'split') ? 'block' : 'none';
+        document.getElementById('txi-parties-section').style.display = (t === 'split') ? 'none' : 'block';
+      };
+
+      // Tx form submit
+      document.getElementById('tx-form').onsubmit = (e) => {
+        e.preventDefault();
+        const date = document.getElementById('tx-date').value;
+        const txType = document.getElementById('tx-type').value;
+        if (!date) { showTxValidation('Date is required'); return; }
+        const assetName = (document.getElementById('tx-asset-name').value || '').trim();
+
+        if (txType === 'split') {
+          const factor = Number(document.getElementById('tx-split-factor').value);
+          if (!factor || factor <= 0) { showTxValidation('Split factor must be a positive number'); return; }
+          state.transactions.push({
+            id: 'T' + state.nextTxNum++,
+            date,
+            type: 'split',
+            factor,
+            assetName,
+          });
+          save(); resetTxForm(); renderAll();
+          return;
+        }
+
+        // purchase or gift
+        const sellers = [...document.querySelectorAll('#sellers-rows .row')].map(row => ({
+          partnerId: row.querySelector('.seller-partner').value,
+          shares: Number(row.querySelector('.seller-shares').value),
+        })).filter(s => s.partnerId && s.shares > 0);
+        const buyers = [...document.querySelectorAll('#buyers-rows .row')].map(row => ({
+          partnerId: row.querySelector('.buyer-partner').value,
+          shares: Number(row.querySelector('.buyer-shares').value),
+        })).filter(b => b.partnerId && b.shares > 0);
+        if (sellers.length === 0) { showTxValidation('At least one ' + (txType==='gift'?'donor':'seller') + ' required'); return; }
+        if (buyers.length === 0) { showTxValidation('At least one ' + (txType==='gift'?'recipient':'buyer') + ' required'); return; }
+        const ts = sellers.reduce((s,x) => s+x.shares, 0);
+        const tb = buyers.reduce((s,x) => s+x.shares, 0);
+        if (Math.abs(ts - tb) > 0.00001) {
+          showTxValidation('Total shares given (' + ts + ') must equal total shares received (' + tb + ')');
+          return;
+        }
+        const sellerSet = new Set();
+        for (const s of sellers) {
+          if (sellerSet.has(s.partnerId)) { showTxValidation('Partner ' + s.partnerId + ' listed twice as ' + (txType==='gift'?'donor':'seller')); return; }
+          sellerSet.add(s.partnerId);
+        }
+        const buyerSet = new Set();
+        for (const b of buyers) {
+          if (buyerSet.has(b.partnerId)) { showTxValidation('Partner ' + b.partnerId + ' listed twice as ' + (txType==='gift'?'recipient':'buyer')); return; }
+          buyerSet.add(b.partnerId);
+        }
+
+        state.transactions.push({
+          id: 'T' + state.nextTxNum++,
+          date,
+          type: txType,
+          assetName,
+          sellers,
+          buyers,
+        });
+        save();
+        resetTxForm();
+        renderAll();
+      };
+
+      // Alloc tab
+      document.getElementById('alloc-year').onchange = renderAllocation;
+      document.getElementById('alloc-show-zero').onchange = renderAllocation;
+      document.getElementById('alloc-export-csv').onclick = exportAllocationCsv;
+      document.getElementById('alloc-print').onclick = () => window.print();
+
+      // Footer data ops
+      document.getElementById('export-json').onclick = exportJson;
+      document.getElementById('import-json').onclick = importJson;
+      document.getElementById('import-file').onchange = (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const fr = new FileReader();
+        fr.onload = () => {
+          try {
+            const loaded = JSON.parse(fr.result);
+            if (!loaded.partners || !loaded.transactions) throw new Error('invalid shape');
+            state = loaded;
+            if (!state.nextPartnerNum) state.nextPartnerNum = Math.max(...state.partners.map(p => parseInt(p.id.slice(1))), 0) + 1;
+            if (!state.nextTxNum) state.nextTxNum = Math.max(...state.transactions.map(t => parseInt(t.id.slice(1))), 0) + 1;
+            save();
+            renderAll();
+            alert('Imported successfully');
+          } catch (err) {
+            alert('Import failed: ' + err.message);
+          }
+        };
+        fr.readAsText(f);
+        e.target.value = '';
+      };
+      document.getElementById('reset-example').onclick = () => {
+        if (!confirm('Reset to P1–P10 example data? This will overwrite current data.')) return;
+        state = defaultExample();
+        save();
+        renderAll();
+      };
+      document.getElementById('clear-all').onclick = () => {
+        if (!confirm('Clear ALL partners and transactions? This cannot be undone.')) return;
+        state = {genesisDate: '', nextPartnerNum: 1, nextTxNum: 1, partners: [], transactions: []};
+        save();
+        renderAll();
+      };
+
+      // Paste-import partners
+      document.getElementById('paste-partners').onclick = openPasteModal;
+      document.getElementById('paste-cancel').onclick = closePasteModal;
+      document.getElementById('paste-parse').onclick = previewPastedPartners;
+      document.getElementById('paste-apply').onclick = applyPastedPartners;
+
+      // Rename asset
+      document.getElementById('rename-cancel').onclick = closeRenameModal;
+      document.getElementById('rename-apply').onclick = applyRename;
+    }
+
+    // ==================== PASTE IMPORT ====================
+    let _pastedPreview = null;
+
+    function openPasteModal() {
+      document.getElementById('paste-textarea').value = '';
+      document.getElementById('paste-preview').innerHTML = '';
+      document.getElementById('paste-preview').style.display = 'none';
+      document.getElementById('paste-apply').style.display = 'none';
+      document.getElementById('paste-modal').style.display = 'flex';
+      setTimeout(() => document.getElementById('paste-textarea').focus(), 50);
+    }
+    function closePasteModal() {
+      document.getElementById('paste-modal').style.display = 'none';
+      _pastedPreview = null;
+    }
+    function parsePastedRows(raw) {
+      // Split by lines, trim empty, split each by tab (fallback: 2+ spaces, then comma)
+      const lines = raw.split(/\r?\n/).map(l => l.replace(/\s+$/, '')).filter(l => l.length > 0);
+      if (lines.length === 0) return {rows: [], errors: ['No data pasted']};
+      const splitLine = (l) => {
+        if (l.indexOf('\t') !== -1) return l.split('\t');
+        if (/\s{2,}/.test(l)) return l.split(/\s{2,}/);
+        if (l.indexOf(',') !== -1) return l.split(',');
+        return [l];
+      };
+      let rows = lines.map(l => splitLine(l).map(c => c.trim()));
+      // Header detection: first row has text in col 0 matching "name"/"partner" and col 1 missing or non-numeric
+      const first = rows[0];
+      const firstColIsHeader = first.length > 0 &&
+        /^(name|partner|partners|partner\s*name)$/i.test(first[0]);
+      const secondColIsHeader = first.length > 1 && isNaN(Number(first[1]));
+      if (firstColIsHeader || (first.length > 1 && secondColIsHeader)) {
+        rows = rows.slice(1);
+      }
+      const errors = [];
+      const parsed = rows.map((cols, i) => {
+        const name = (cols[0] || '').trim();
+        if (!name) { errors.push('Row ' + (i + 1) + ': missing name'); return null; }
+        let shares = 0;
+        if (cols.length > 1 && cols[1] !== '') {
+          const n = Number(cols[1].replace(/[,$]/g, ''));
+          if (isNaN(n)) { errors.push('Row ' + (i + 1) + ' (' + name + '): shares "' + cols[1] + '" not numeric — using 0'); }
+          else shares = n;
+        }
+        return {name, shares};
+      }).filter(r => r !== null);
+      return {rows: parsed, errors};
+    }
+    function previewPastedPartners() {
+      const raw = document.getElementById('paste-textarea').value;
+      const {rows, errors} = parsePastedRows(raw);
+      _pastedPreview = rows;
+      const box = document.getElementById('paste-preview');
+      box.style.display = 'block';
+      if (rows.length === 0) {
+        box.innerHTML = '<div class="error" style="margin:0;">No valid rows detected.' + (errors.length ? '<br>' + errors.map(e => '• ' + escapeHtml(e)).join('<br>') : '') + '</div>';
+        document.getElementById('paste-apply').style.display = 'none';
+        return;
+      }
+      const warnings = errors.length ? '<div class="error" style="margin:0 0 8px 0;"><strong>Warnings:</strong><br>' + errors.map(e => '• ' + escapeHtml(e)).join('<br>') + '</div>' : '';
+      const rowsHtml = rows.map(r =>
+        '<tr><td>' + escapeHtml(r.name) + '</td><td class="num">' + fmtNum(r.shares, 4) + '</td></tr>'
+      ).join('');
+      box.innerHTML = warnings +
+        '<div class="meta" style="padding:6px 8px;">Detected <strong>' + rows.length + '</strong> partners to append:</div>' +
+        '<table><thead><tr><th>Name</th><th class="num">Initial Shares</th></tr></thead><tbody>' + rowsHtml + '</tbody></table>';
+      document.getElementById('paste-apply').style.display = 'inline-block';
+    }
+    function applyPastedPartners() {
+      if (!_pastedPreview || _pastedPreview.length === 0) return;
+      for (const r of _pastedPreview) {
+        const newId = 'P' + state.nextPartnerNum++;
+        state.partners.push({id: newId, name: r.name, initialShares: r.shares});
+      }
+      save();
+      closePasteModal();
+      renderAll();
+    }
+
+    // ==================== RENAME ASSET ====================
+    let _renameTxId = null;
+    function openRenameModal(txId) {
+      const tx = state.transactions.find(t => t.id === txId);
+      if (!tx) return;
+      _renameTxId = txId;
+      // Find the asset id that this tx created (A# by position in sorted tx order)
+      const sortedTxs = [...state.transactions].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        return parseInt(a.id.replace(/\D/g,''))-parseInt(b.id.replace(/\D/g,''));
+      });
+      const idx = sortedTxs.findIndex(t => t.id === txId);
+      const assetId = 'A' + (idx + 1);
+      document.getElementById('rename-target').textContent = assetId + ' (tx ' + txId + ')';
+      document.getElementById('rename-input').value = tx.assetName || '';
+      document.getElementById('rename-modal').style.display = 'flex';
+      setTimeout(() => document.getElementById('rename-input').focus(), 50);
+    }
+    function closeRenameModal() {
+      document.getElementById('rename-modal').style.display = 'none';
+      _renameTxId = null;
+    }
+    function applyRename() {
+      if (!_renameTxId) return;
+      const tx = state.transactions.find(t => t.id === _renameTxId);
+      if (!tx) { closeRenameModal(); return; }
+      tx.assetName = (document.getElementById('rename-input').value || '').trim();
+      save();
+      closeRenameModal();
+      renderAll();
+    }
+
+    // ==================== IMPORT TRANSACTION ====================
+    let _txImportPreview = null;
+
+    function openTxImportModal() {
+      document.getElementById('txi-type').value = 'purchase';
+      document.getElementById('txi-date').value = '';
+      document.getElementById('txi-name').value = '';
+      document.getElementById('txi-factor').value = '';
+      document.getElementById('txi-textarea').value = '';
+      document.getElementById('txi-preview').innerHTML = '';
+      document.getElementById('txi-preview').style.display = 'none';
+      document.getElementById('txi-apply').style.display = 'none';
+      document.getElementById('txi-factor-row').style.display = 'none';
+      document.getElementById('txi-parties-section').style.display = 'block';
+      document.getElementById('tx-import-modal').style.display = 'flex';
+      setTimeout(() => document.getElementById('txi-date').focus(), 50);
+    }
+    function closeTxImportModal() {
+      document.getElementById('tx-import-modal').style.display = 'none';
+      _txImportPreview = null;
+    }
+
+    function resolvePartner(token) {
+      if (!token) return null;
+      const t = token.trim();
+      // Try ID match first (case-insensitive)
+      let p = state.partners.find(x => x.id.toLowerCase() === t.toLowerCase());
+      if (p) return p;
+      // Then name match (case-insensitive)
+      p = state.partners.find(x => x.name.toLowerCase() === t.toLowerCase());
+      return p || null;
+    }
+
+    function parseSharesCell(raw) {
+      // Accepts: 10, -10, (10), $1,000, "10.5"
+      if (!raw) return NaN;
+      let s = String(raw).trim().replace(/[$"]/g, '');
+      let negative = false;
+      // Parentheses notation = negative
+      const m = s.match(/^\((.+)\)$/);
+      if (m) { s = m[1].trim(); negative = true; }
+      // Strip thousands commas
+      s = s.replace(/,/g, '');
+      const n = Number(s);
+      if (isNaN(n)) return NaN;
+      return negative ? -Math.abs(n) : n;
+    }
+
+    function parseRoleCell(raw) {
+      if (!raw) return null;
+      const s = String(raw).trim().toLowerCase();
+      if (/^(buyer|buy|bought|in|recipient|donee|received|receiver)$/.test(s)) return 'buyer';
+      if (/^(seller|sell|sold|out|donor|gave|gifted|giver)$/.test(s)) return 'seller';
+      return null;
+    }
+
+    function parseTxParticipants(raw) {
+      const lines = raw.split(/\r?\n/).map(l => l.replace(/\s+$/, '')).filter(l => l.length > 0);
+      if (lines.length === 0) return {sellers: [], buyers: [], errors: ['No data pasted']};
+      const splitLine = (l) => {
+        if (l.indexOf('\t') !== -1) return l.split('\t');
+        if (/\s{2,}/.test(l)) return l.split(/\s{2,}/);
+        if (l.indexOf(',') !== -1) return l.split(',');
+        return l.split(/\s+/);
+      };
+      let rows = lines.map(l => splitLine(l).map(c => c.trim()));
+      // Header detection: first row has "partner"/"role"/"shares" etc.
+      const first = rows[0] || [];
+      const firstLc = first.map(c => c.toLowerCase());
+      const looksHeader = firstLc.some(c => /^(partner|partner\s*id|name|role|shares|quantity|amount)$/.test(c));
+      if (looksHeader) rows = rows.slice(1);
+
+      const sellers = [];
+      const buyers = [];
+      const errors = [];
+      for (let i = 0; i < rows.length; i++) {
+        const cols = rows[i];
+        if (cols.length === 0 || cols.every(c => !c)) continue;
+        const partner = resolvePartner(cols[0]);
+        if (!partner) { errors.push('Row ' + (i+1) + ': partner "' + (cols[0] || '') + '" not found'); continue; }
+        let role = null;
+        let sharesCell;
+        if (cols.length >= 3) {
+          role = parseRoleCell(cols[1]);
+          sharesCell = cols[2];
+        } else {
+          sharesCell = cols[1];
+        }
+        const rawShares = parseSharesCell(sharesCell);
+        if (isNaN(rawShares) || rawShares === 0) { errors.push('Row ' + (i+1) + ' (' + partner.id + '): shares "' + (sharesCell || '') + '" not a non-zero number'); continue; }
+        if (role == null) {
+          role = rawShares < 0 ? 'seller' : 'buyer';
+        }
+        const shares = Math.abs(rawShares);
+        if (role === 'seller') sellers.push({partnerId: partner.id, shares});
+        else buyers.push({partnerId: partner.id, shares});
+      }
+      // Combine duplicates
+      const combine = arr => {
+        const m = {};
+        for (const x of arr) m[x.partnerId] = (m[x.partnerId] || 0) + x.shares;
+        return Object.entries(m).map(([partnerId, shares]) => ({partnerId, shares}));
+      };
+      return {sellers: combine(sellers), buyers: combine(buyers), errors};
+    }
+
+    function previewTxImport() {
+      const type = document.getElementById('txi-type').value;
+      const date = document.getElementById('txi-date').value;
+      const name = document.getElementById('txi-name').value.trim();
+      const factor = Number(document.getElementById('txi-factor').value);
+      const raw = document.getElementById('txi-textarea').value;
+      const box = document.getElementById('txi-preview');
+      box.style.display = 'block';
+      const issues = [];
+      if (!date) issues.push('Date is required');
+
+      if (type === 'split') {
+        if (!factor || factor <= 0) issues.push('Split factor must be a positive number');
+        if (issues.length) {
+          box.innerHTML = '<div class="error" style="margin:0;">' + issues.map(e => '• ' + escapeHtml(e)).join('<br>') + '</div>';
+          document.getElementById('txi-apply').style.display = 'none';
+          return;
+        }
+        _txImportPreview = {type, date, assetName: name, factor};
+        box.innerHTML = '<table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody>' +
+          '<tr><td>Type</td><td>Share split</td></tr>' +
+          '<tr><td>Date</td><td>' + formatDate(date) + '</td></tr>' +
+          '<tr><td>Factor</td><td>' + fmtNum(factor, 4) + '</td></tr>' +
+          '<tr><td>Note</td><td>' + escapeHtml(name || '—') + '</td></tr>' +
+          '</tbody></table>';
+        document.getElementById('txi-apply').style.display = 'inline-block';
+        return;
+      }
+
+      const parsed = parseTxParticipants(raw);
+      if (parsed.errors.length) issues.push(...parsed.errors);
+      if (parsed.sellers.length === 0) issues.push('No ' + (type==='gift'?'donors':'sellers') + ' detected (negative / parens / role=seller)');
+      if (parsed.buyers.length === 0) issues.push('No ' + (type==='gift'?'recipients':'buyers') + ' detected (positive / role=buyer)');
+      const ts = parsed.sellers.reduce((s,x) => s+x.shares, 0);
+      const tb = parsed.buyers.reduce((s,x) => s+x.shares, 0);
+      if (ts > 0 && tb > 0 && Math.abs(ts - tb) > 0.00001) {
+        issues.push('Given (' + ts + ') ≠ Received (' + tb + ')');
+      }
+
+      if (issues.length && (parsed.sellers.length === 0 || parsed.buyers.length === 0)) {
+        box.innerHTML = '<div class="error" style="margin:0;">' + issues.map(e => '• ' + escapeHtml(e)).join('<br>') + '</div>';
+        document.getElementById('txi-apply').style.display = 'none';
+        return;
+      }
+
+      _txImportPreview = {type, date, assetName: name, sellers: parsed.sellers, buyers: parsed.buyers};
+      const warns = issues.length ? '<div class="error" style="margin:0 0 8px 0;"><strong>Issues:</strong><br>' + issues.map(e => '• ' + escapeHtml(e)).join('<br>') + '</div>' : '';
+      const sellerRows = parsed.sellers.map(s => '<tr><td class="mono">' + escapeHtml(s.partnerId) + '</td><td>' + (type==='gift'?'donor':'seller') + '</td><td class="num">' + fmtNum(s.shares, 4) + '</td></tr>').join('');
+      const buyerRows = parsed.buyers.map(b => '<tr><td class="mono">' + escapeHtml(b.partnerId) + '</td><td>' + (type==='gift'?'recipient':'buyer') + '</td><td class="num">' + fmtNum(b.shares, 4) + '</td></tr>').join('');
+      box.innerHTML = warns +
+        '<div class="meta" style="padding:6px 8px;">' + formatDate(date) + ' · <strong>' + type.toUpperCase() + '</strong>' + (name ? ' · ' + escapeHtml(name) : '') + '</div>' +
+        '<table><thead><tr><th>Partner</th><th>Role</th><th class="num">Shares</th></tr></thead><tbody>' + sellerRows + buyerRows +
+        '<tr class="total-row"><td colspan="2"><strong>Totals</strong></td><td class="num"><strong>' + fmtNum(ts, 4) + ' ↔ ' + fmtNum(tb, 4) + '</strong></td></tr>' +
+        '</tbody></table>';
+      document.getElementById('txi-apply').style.display = issues.length ? 'none' : 'inline-block';
+    }
+
+    function applyTxImport() {
+      if (!_txImportPreview) return;
+      const pv = _txImportPreview;
+      const tx = {
+        id: 'T' + state.nextTxNum++,
+        date: pv.date,
+        type: pv.type,
+        assetName: pv.assetName || '',
+      };
+      if (pv.type === 'split') {
+        tx.factor = pv.factor;
+      } else {
+        tx.sellers = pv.sellers;
+        tx.buyers = pv.buyers;
+      }
+      state.transactions.push(tx);
+      save();
+      closeTxImportModal();
+      renderAll();
+    }
+
+    function showTxValidation(msg) {
+      const el = document.getElementById('tx-validation');
+      el.textContent = msg;
+      el.classList.remove('ok');
+    }
+
+    // ==================== INIT ====================
+    load();
+    bindEvents();
+    renderAll();
+  })();
+  </script>
+</body>
+</html>
